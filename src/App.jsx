@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase, isConfigured } from "./supabase.js";
+import {
+  Zap, AlertTriangle, ArrowLeftRight, ArrowRight,
+  Plus, Pencil, Trash2, X, RotateCcw, Users,
+  LogOut, Save, Undo2, Sun, Moon, Check,
+  ChevronRight, ChevronLeft, Link2, FileText,
+  Eye, EyeOff
+} from "lucide-react";
+
 
 // ─── DATOS INICIALES ─────────────────────────────────────────────────────────
 
@@ -112,10 +120,21 @@ const ES = {
 };
 
 const PS = {
-  bottleneck: { color: "#ef4444", icon: "⚡" },
-  warning: { color: "#f59e0b", icon: "⚠" },
-  redundancy: { color: "#8b5cf6", icon: "↔" },
+  bottleneck: { color: "#ef4444", Icon: Zap },
+  warning: { color: "#f59e0b", Icon: AlertTriangle },
+  redundancy: { color: "#8b5cf6", Icon: ArrowLeftRight },
 };
+
+const EDGE_LABELS = {
+  main: "Principal",
+  feedback: "Retroalimentación",
+  reclamacion: "Reclamación",
+  proceso: "Proceso",
+  sistema: "Sistema",
+  validacion: "Validación",
+  admin: "Administración",
+};
+
 
 let _uid = 200;
 const uid = () => `x${++_uid}`;
@@ -302,6 +321,18 @@ export default function App() {
   const [draggingNode, setDraggingNode] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  // theme + undo + save feedback
+  const [theme, setTheme] = useState("dark");
+  const [history, setHistory] = useState([]);
+  const [saveMsg, setSaveMsg] = useState("");
+  const historyRef = useRef([]);
+
+  const pushHistory = useCallback((ns, es, ps) => {
+    const snap = { nodes: ns, edges: es, problems: ps };
+    historyRef.current = [snap, ...historyRef.current].slice(0, 30);
+    setHistory(h => [snap, ...h].slice(0, 30));
+  }, []);
+
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const saveTimer = useRef(null);
@@ -362,18 +393,56 @@ export default function App() {
     }, 800);
   }, []);
 
-  // ── State mutators that also save ──
+  // ── State mutators that also push history ──
   const updateNodes = useCallback((fn) => {
-    setNodes(prev => { const next = typeof fn === "function" ? fn(prev) : fn; scheduleSave(next, edges, problems); return next; });
-  }, [edges, problems, scheduleSave]);
+    setNodes(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      pushHistory(prev, edges, problems);
+      scheduleSave(next, edges, problems);
+      return next;
+    });
+  }, [edges, problems, scheduleSave, pushHistory]);
 
   const updateEdges = useCallback((fn) => {
-    setEdges(prev => { const next = typeof fn === "function" ? fn(prev) : fn; scheduleSave(nodes, next, problems); return next; });
-  }, [nodes, problems, scheduleSave]);
+    setEdges(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      pushHistory(nodes, prev, problems);
+      scheduleSave(nodes, next, problems);
+      return next;
+    });
+  }, [nodes, problems, scheduleSave, pushHistory]);
 
   const updateProblems = useCallback((fn) => {
-    setProblems(prev => { const next = typeof fn === "function" ? fn(prev) : fn; scheduleSave(nodes, edges, next); return next; });
-  }, [nodes, edges, scheduleSave]);
+    setProblems(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      pushHistory(nodes, edges, prev);
+      scheduleSave(nodes, edges, next);
+      return next;
+    });
+  }, [nodes, edges, scheduleSave, pushHistory]);
+
+  // ── Guardar ahora explícitamente ──
+  const saveNow = useCallback(async () => {
+    if (!supabase) return;
+    clearTimeout(saveTimer.current);
+    ignoreRemote.current = true;
+    await saveToDB({ nodes, edges, problems });
+    setSaveMsg("Guardado");
+    setTimeout(() => { setSaveMsg(""); ignoreRemote.current = false; }, 2000);
+  }, [nodes, edges, problems]);
+
+  // ── Deshacer (undo) ──
+  const undo = useCallback(() => {
+    const [prev, ...rest] = historyRef.current;
+    if (!prev) return;
+    historyRef.current = rest;
+    setHistory(rest);
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    setProblems(prev.problems);
+    scheduleSave(prev.nodes, prev.edges, prev.problems);
+  }, [scheduleSave]);
+
 
   // ── Helpers ──
   const getCenter = n => ({ x: n.x + NODE_W / 2, y: n.y + NODE_H / 2 });
@@ -400,13 +469,14 @@ export default function App() {
     return edge.from === selected || edge.to === selected;
   }, [selected, activeProblems, problems, edges]);
 
-  // ── Wheel zoom ──
+  // ── Wheel zoom (fix: se re-registra si el ref cambia) ──
   useEffect(() => {
     const el = containerRef.current;
+    if (!el) return;
     const h = e => { e.preventDefault(); setZoom(z => Math.min(2.5, Math.max(0.25, z * (e.deltaY > 0 ? 0.9 : 1.11)))); };
-    el?.addEventListener("wheel", h, { passive: false });
-    return () => el?.removeEventListener("wheel", h);
-  }, []);
+    el.addEventListener("wheel", h, { passive: false });
+    return () => el.removeEventListener("wheel", h);
+  }, [containerRef.current]);
 
   // ── Mouse handlers ──
   const onSvgDown = e => {
@@ -526,47 +596,83 @@ export default function App() {
     <div style={{ fontFamily: "'IBM Plex Mono',monospace", background: "#0f1117", minHeight: "100vh", display: "flex", flexDirection: "column", userSelect: "none" }}>
 
       {/* ══ HEADER ══ */}
-      <div style={{ background: "linear-gradient(90deg,#1e3a5f,#0f1117)", borderBottom: "1px solid #1e293b", padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ background: theme === "dark" ? "linear-gradient(90deg,#1e3a5f,#0f1117)" : "linear-gradient(90deg,#dbeafe,#f8fafc)", borderBottom: `1px solid ${theme === "dark" ? "#1e293b" : "#e2e8f0"}`, padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
         <div>
           <div style={{ color: "#60a5fa", fontSize: "9px", letterSpacing: "3px" }}>SISTEMA DE GESTIÓN DE PRODUCCIÓN</div>
-          <div style={{ color: "#f1f5f9", fontSize: "14px", fontWeight: "700" }}>MAPA INTERACTIVO EDITABLE</div>
+          <div style={{ color: theme === "dark" ? "#f1f5f9" : "#1e293b", fontSize: "14px", fontWeight: "700" }}>MAPA INTERACTIVO EDITABLE</div>
         </div>
 
         {/* Sync status */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {isConfigured ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#0f2027", border: "1px solid #1e3a5f", borderRadius: "4px", padding: "3px 9px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: theme === "dark" ? "#0f2027" : "#eff6ff", border: `1px solid ${theme === "dark" ? "#1e3a5f" : "#bfdbfe"}`, borderRadius: "4px", padding: "3px 9px" }}>
               <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dbReady ? "#22c55e" : "#f59e0b", boxShadow: `0 0 6px ${dbReady ? "#22c55e" : "#f59e0b"}` }} />
-              <span style={{ color: "#64748b", fontSize: "9px" }}>{dbReady ? "Supabase conectado" : "Conectando…"}</span>
-              <span style={{ color: "#334155", fontSize: "9px" }}>·</span>
-              <span style={{ color: "#60a5fa", fontSize: "9px" }}>👥 {onlineUsers} en línea</span>
+              <span style={{ color: theme === "dark" ? "#94a3b8" : "#475569", fontSize: "9px" }}>{dbReady ? "Supabase conectado" : "Conectando…"}</span>
+              <span style={{ color: theme === "dark" ? "#475569" : "#94a3b8", fontSize: "9px" }}>·</span>
+              <Users size={11} color="#60a5fa" />
+              <span style={{ color: "#60a5fa", fontSize: "9px" }}>{onlineUsers} en línea</span>
             </div>
           ) : (
-            <div style={{ background: "#431407", border: "1px solid #7c2d12", borderRadius: "4px", padding: "3px 9px" }}>
-              <span style={{ color: "#fb923c", fontSize: "9px" }}>⚠ Sin Supabase — modo local</span>
+            <div style={{ background: "#431407", border: "1px solid #7c2d12", borderRadius: "4px", padding: "3px 9px", display: "flex", alignItems: "center", gap: "5px" }}>
+              <AlertTriangle size={11} color="#fb923c" />
+              <span style={{ color: "#fb923c", fontSize: "9px" }}>Sin Supabase — modo local</span>
             </div>
           )}
-          {syncMsg && <span style={{ color: "#22c55e", fontSize: "9px", animation: "fadeIn 0.3s" }}>{syncMsg}</span>}
+          {syncMsg && <span style={{ color: "#22c55e", fontSize: "9px" }}>{syncMsg}</span>}
+          {saveMsg && <span style={{ color: "#22c55e", fontSize: "9px", display: "flex", alignItems: "center", gap: "3px" }}><Check size={11} /> {saveMsg}</span>}
         </div>
 
         <div style={{ flex: 1 }} />
 
         {/* Toolbar */}
         <div style={{ display: "flex", gap: "5px", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Conexión */}
           <button onClick={() => { setAddEdgeMode(m => !m); setAddEdgeFrom(null); }}
-            style={{ background: addEdgeMode ? "#3b82f6" : "#1e293b", border: `1px solid ${addEdgeMode ? "#3b82f6" : "#334155"}`, color: addEdgeMode ? "#fff" : "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
-            {addEdgeMode ? (addEdgeFrom ? "▶ Clic destino…" : "▶ Clic origen…") : "＋ Conexión"}
+            style={{ display: "flex", alignItems: "center", gap: "4px", background: addEdgeMode ? "#3b82f6" : (theme === "dark" ? "#1e293b" : "#e2e8f0"), border: `1px solid ${addEdgeMode ? "#3b82f6" : (theme === "dark" ? "#334155" : "#94a3b8")}`, color: addEdgeMode ? "#fff" : (theme === "dark" ? "#94a3b8" : "#475569"), padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <Link2 size={12} />
+            {addEdgeMode ? (addEdgeFrom ? "Clic destino…" : "Clic origen…") : "Conexión"}
           </button>
-          {addEdgeMode && <button onClick={() => { setAddEdgeMode(false); setAddEdgeFrom(null); }} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "5px 9px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>✕</button>}
-          <button onClick={() => setAddNodeM(true)} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>＋ Nodo</button>
-          <button onClick={() => setAddProblemM(true)} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>＋ Problema</button>
-          <div style={{ width: "1px", height: "18px", background: "#334155" }} />
-          <button onClick={() => setZoom(z => Math.min(2.5, z * 1.15))} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}>＋</button>
-          <button onClick={() => setZoom(z => Math.max(0.25, z * 0.87))} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}>−</button>
-          <button onClick={() => { setZoom(0.82); setPan({ x: 20, y: 20 }); }} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>↺</button>
-          <button onClick={() => { setSelected(null); setActiveProblems([]); }} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>✕ Limpiar</button>
-          <div style={{ width: "1px", height: "18px", background: "#334155" }} />
-          <button onClick={() => supabase?.auth.signOut()} style={{ background: "#1e293b", border: "1px solid #334155", color: "#ef4444", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>⏻ Salir</button>
+          {addEdgeMode && <button onClick={() => { setAddEdgeMode(false); setAddEdgeFrom(null); }} style={{ display: "flex", alignItems: "center", background: "#ef4444", border: "none", color: "#fff", padding: "5px 8px", borderRadius: "4px", cursor: "pointer" }}><X size={12} /></button>}
+
+          {/* Nodo y Problema */}
+          <button onClick={() => setAddNodeM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <Plus size={12} /> Nodo
+          </button>
+          <button onClick={() => setAddProblemM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <Plus size={12} /> Problema
+          </button>
+
+          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+
+          {/* Zoom */}
+          <button onClick={() => setZoom(z => Math.min(2.5, z * 1.15))} title="Ampliar" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><Plus size={13} /></button>
+          <button onClick={() => setZoom(z => Math.max(0.25, z * 0.87))} title="Reducir" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}>−</button>
+          <button onClick={() => { setZoom(0.82); setPan({ x: 20, y: 20 }); }} title="Resetear vista" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><RotateCcw size={13} /></button>
+          <button onClick={() => { setSelected(null); setActiveProblems([]); }} title="Limpiar selección" style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <X size={12} /> Limpiar
+          </button>
+
+          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+
+          {/* Deshacer y Guardar */}
+          <button onClick={undo} disabled={history.length === 0} title={`Deshacer (${history.length} pasos)`} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: history.length > 0 ? "#f59e0b" : (theme === "dark" ? "#374151" : "#cbd5e1"), padding: "5px 10px", borderRadius: "4px", cursor: history.length > 0 ? "pointer" : "not-allowed", fontSize: "10px", fontFamily: "inherit", opacity: history.length > 0 ? 1 : 0.5 }}>
+            <Undo2 size={12} /> Deshacer
+          </button>
+          {isConfigured && (
+            <button onClick={saveNow} title="Guardar ahora" style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1d4ed8", border: "1px solid #3b82f6", color: "#fff", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+              <Save size={12} /> Guardar
+            </button>
+          )}
+
+          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+
+          {/* Tema y Logout */}
+          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Cambiar tema" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#f59e0b" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>
+            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
+          <button onClick={() => supabase?.auth.signOut()} title="Cerrar sesión" style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: "#ef4444", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <LogOut size={12} /> Salir
+          </button>
         </div>
 
         {addEdgeMode && (
@@ -596,9 +702,11 @@ export default function App() {
                 <div key={prob.id} style={{ background: isA ? "#1e293b" : "#0f1117", border: `1px solid ${isA ? ps.color : "#1e293b"}`, borderLeft: `3px solid ${ps.color}`, borderRadius: "6px", padding: "8px 9px", marginBottom: "5px", cursor: "pointer" }}
                   onClick={() => { setSelected(null); setActiveProblems(ap => ap.includes(prob.id) ? ap.filter(x => x !== prob.id) : [...ap, prob.id]); }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "3px" }}>
-                    <span style={{ background: ps.color, borderRadius: "3px", padding: "1px 5px", fontSize: "10px", color: "#fff", fontWeight: "700" }}>{ps.icon}</span>
+                    <span style={{ background: ps.color, borderRadius: "3px", padding: "2px 6px", display: "flex", alignItems: "center" }}>
+                      <ps.Icon size={11} color="#fff" strokeWidth={2.5} />
+                    </span>
                     <span style={{ color: "#f1f5f9", fontSize: "10px", fontWeight: "600", flex: 1, lineHeight: 1.3 }}>{prob.title}</span>
-                    <button onClick={e => { e.stopPropagation(); setEditProblem({ ...prob }); }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "11px" }}>✏</button>
+                    <button onClick={e => { e.stopPropagation(); setEditProblem({ ...prob }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={12} /></button>
                   </div>
                   {isA && <div style={{ color: "#94a3b8", fontSize: "9px", lineHeight: 1.5, marginTop: "4px" }}>{prob.desc}</div>}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "3px", marginTop: "4px" }}>
@@ -609,18 +717,24 @@ export default function App() {
             })}
           </div>
           <div style={{ borderTop: "1px solid #1e293b", padding: "8px 11px" }}>
-            <div style={{ color: "#334155", fontSize: "8.5px", letterSpacing: "1.5px", marginBottom: "5px" }}>TIPO DE CONEXIÓN</div>
-            {Object.entries(ES).map(([type, s]) => (
-              <div key={type} style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-                <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash === "none" ? "" : s.dash} /></svg>
-                <span style={{ color: "#4b5563", fontSize: "9px" }}>{type}</span>
-              </div>
-            ))}
+            <div style={{ color: "#94a3b8", fontSize: "9px", letterSpacing: "1.5px", marginBottom: "6px", fontWeight: "600" }}>TIPOS DE CONEXIÓN</div>
+            {Object.entries(ES).map(([type, s]) => {
+              const isBidir = edges.some(e => hasPair(e, edges) && (e.type === type));
+              return (
+                <div key={type} style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "5px" }}>
+                  <svg width="32" height="12"><defs><marker id={`leg-${type}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={s.color} /></marker></defs><line x1="2" y1="6" x2="30" y2="6" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash === "none" ? "" : s.dash} markerEnd={`url(#leg-${type})`} /></svg>
+                  <span style={{ color: "#cbd5e1", fontSize: "10px", flex: 1 }}>{EDGE_LABELS[type] || type}</span>
+                  {isBidir
+                    ? <ArrowLeftRight size={11} color="#60a5fa" title="Bidireccional" />
+                    : <ArrowRight size={11} color="#475569" title="Unidireccional" />}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* ══ CANVAS ══ */}
-        <div ref={containerRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: "#0f1117", cursor: addEdgeMode ? "crosshair" : draggingNode ? "grabbing" : panning ? "grabbing" : "grab" }}
+        <div ref={containerRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: theme === "dark" ? "#0f1117" : "#f1f5f9", cursor: addEdgeMode ? "crosshair" : draggingNode ? "grabbing" : panning ? "grabbing" : "grab" }}
           onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
           <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
             <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 40},${pan.y % 40}) scale(${zoom})`}><path d="M40 0L0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="0.5" /></pattern></defs>
@@ -721,7 +835,9 @@ export default function App() {
               const ps = PS[prob.type];
               return (
                 <div key={pid} style={{ marginBottom: "12px", borderLeft: `2px solid ${ps.color}`, paddingLeft: "9px" }}>
-                  <div style={{ color: "#f1f5f9", fontSize: "11px", fontWeight: "700", marginBottom: "4px" }}>{ps.icon} {prob.title}</div>
+                  <div style={{ color: "#f1f5f9", fontSize: "11px", fontWeight: "700", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <ps.Icon size={12} color={ps.color} /> {prob.title}
+                  </div>
                   <div style={{ color: "#94a3b8", fontSize: "9.5px", lineHeight: 1.55 }}>{prob.desc}</div>
                   <div style={{ marginTop: "7px", display: "flex", flexWrap: "wrap", gap: "3px" }}>
                     {prob.nodes.map(nid => {
@@ -733,7 +849,7 @@ export default function App() {
                       );
                     })}
                   </div>
-                  <div style={{ marginTop: "8px" }}><Btn sm color="#374151" onClick={() => setEditProblem({ ...prob })}>✏ Editar</Btn></div>
+                  <div style={{ marginTop: "8px" }}><Btn sm color="#374151" onClick={() => setEditProblem({ ...prob })}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar</span></Btn></div>
                 </div>
               );
             })}
@@ -746,13 +862,13 @@ export default function App() {
                     <div style={{ color: col.accent, fontSize: "8px", letterSpacing: "2px" }}>{selectedNode.group.toUpperCase()}</div>
                     <div style={{ color: "#fff", fontSize: "13px", fontWeight: "700" }}>{selectedNode.label}</div>
                     <div style={{ color: "#cbd5e1", fontSize: "9px", marginTop: "2px" }}>{selectedNode.sub}</div>
-                    {selectedNode.persona && <div style={{ marginTop: "5px", background: "rgba(0,0,0,0.3)", borderRadius: "3px", padding: "3px 7px", color: col.accent, fontSize: "9px" }}>👤 {selectedNode.persona}</div>}
-                    <div style={{ marginTop: "8px" }}><Btn sm onClick={() => setEditNode({ ...selectedNode })}>✏ Editar nodo</Btn></div>
+                    {selectedNode.persona && <div style={{ marginTop: "5px", background: "rgba(0,0,0,0.3)", borderRadius: "3px", padding: "3px 7px", color: col.accent, fontSize: "9px", display: "flex", alignItems: "center", gap: "5px" }}><Users size={11} /> {selectedNode.persona}</div>}
+                    <div style={{ marginTop: "8px" }}><Btn sm onClick={() => setEditNode({ ...selectedNode })}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar nodo</span></Btn></div>
                   </div>
                   {problems.filter(p => p.nodes.includes(selectedNode.id)).map(prob => {
                     const ps = PS[prob.type];
                     return <div key={prob.id} style={{ background: "#0f1117", border: `1px solid ${ps.color}44`, borderLeft: `2px solid ${ps.color}`, borderRadius: "4px", padding: "5px 7px", marginBottom: "4px", cursor: "pointer" }} onClick={() => setActiveProblems(ap => ap.includes(prob.id) ? ap : [...ap, prob.id])}>
-                      <div style={{ color: ps.color, fontSize: "9px", fontWeight: "700" }}>{ps.icon} {prob.title}</div>
+                      <div style={{ color: ps.color, fontSize: "9px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}><ps.Icon size={11} /> {prob.title}</div>
                     </div>;
                   })}
                   <div style={{ color: "#334155", fontSize: "8.5px", letterSpacing: "1px", margin: "8px 0 5px" }}>CONEXIONES ({connEdges.length})</div>
@@ -796,13 +912,13 @@ export default function App() {
           <Field label="ÁREA" value={editNode.group} onChange={v => setEditNode(n => ({ ...n, group: v }))} type="select" options={GROUPS} />
           <label style={{ color: "#64748b", fontSize: "10px", display: "flex", alignItems: "center", gap: "7px", marginBottom: "14px", cursor: "pointer" }}>
             <input type="checkbox" checked={!!editNode.bottleneck} onChange={e => setEditNode(n => ({ ...n, bottleneck: e.target.checked }))} style={{ accentColor: "#ef4444" }} />
-            ⚡ Marcar como cuello de botella
+            <Zap size={12} color="#ef4444" /> Marcar como cuello de botella
           </label>
           <div style={{ display: "flex", gap: "8px", justifyContent: "space-between" }}>
-            <Btn color="#ef4444" onClick={() => deleteNode(editNode.id)}>🗑 Eliminar nodo</Btn>
+            <Btn color="#ef4444" onClick={() => deleteNode(editNode.id)}><span style={{ display: "flex", alignItems: "center", gap: "5px" }}><Trash2 size={13} /> Eliminar</span></Btn>
             <div style={{ display: "flex", gap: "6px" }}>
-              <Btn color="#374151" onClick={() => setEditNode(null)}>Cancelar</Btn>
-              <Btn onClick={saveNode}>Guardar</Btn>
+              <Btn color="#374151" onClick={() => setEditNode(null)}><span style={{ display: "flex", alignItems: "center", gap: "5px" }}><X size={13} /> Cancelar</span></Btn>
+              <Btn onClick={saveNode}><span style={{ display: "flex", alignItems: "center", gap: "5px" }}><Check size={13} /> Guardar</span></Btn>
             </div>
           </div>
         </Modal>
