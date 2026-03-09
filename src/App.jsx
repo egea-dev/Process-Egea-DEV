@@ -33,6 +33,7 @@ const INITIAL_NODES = [
   { id: "hacchi", label: "HACCHI", sub: "1ª carga escandallos", group: "sistema", x: 980, y: 340, persona: "Hacchi" },
   { id: "matias", label: "MATÍAS", sub: "RRHH", group: "admin", x: 830, y: 620, persona: "Matías" },
   { id: "miguel", label: "MIGUEL ÁNGEL", sub: "Decisiones Org.", group: "admin", x: 830, y: 790, persona: "Miguel Ángel", bottleneck: true },
+  { id: "hoja_produccion", label: "HOJA DE PRODUCCIÓN", sub: "En espera de validación", group: "sistema", x: 180, y: 340, persona: "Sistema" },
 ];
 
 const INITIAL_EDGES = [
@@ -76,6 +77,14 @@ const INITIAL_EDGES = [
   { id: "e38", from: "miguel", to: "compras", label: "define responsable", type: "admin" },
   { id: "e39", from: "miguel", to: "factusol", label: "define contabilidad", type: "admin" },
   { id: "e40", from: "matias", to: "sistema", label: "RRHH en sistema", type: "admin" },
+  { id: "e41", from: "gestor", to: "hoja_produccion", label: "genera hoja", type: "main" },
+  { id: "e42", from: "almacen", to: "hoja_produccion", label: "visto bueno material", type: "validacion" },
+  { id: "e43", from: "corte", to: "hoja_produccion", label: "visto bueno", type: "validacion" },
+  { id: "e44", from: "confeccion", to: "hoja_produccion", label: "visto bueno", type: "validacion" },
+  { id: "e45", from: "tapiceria", to: "hoja_produccion", label: "visto bueno", type: "validacion" },
+  { id: "e46", from: "carpinteria", to: "hoja_produccion", label: "visto bueno", type: "validacion" },
+  { id: "e47", from: "juan", to: "hoja_produccion", label: "visto bueno orden", type: "validacion" },
+  { id: "e48", from: "hoja_produccion", to: "juan", label: "inicia producción", type: "main" },
 ];
 
 const INITIAL_PROBLEMS = [
@@ -284,8 +293,9 @@ export default function App() {
   const [syncMsg, setSyncMsg] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [session, setSession] = useState(undefined); // undefined = cargando
-  const [docs, setDocs] = useState("");
+  const [docs, setDocs] = useState([]); // Array de { id, title, content }
   const [docsModal, setDocsModal] = useState(false);
+  const [activeDocId, setActiveDocId] = useState(null);
   const [editingDocs, setEditingDocs] = useState(false);
 
   // ── Auth session ──
@@ -426,8 +436,9 @@ export default function App() {
 
   const updateDocs = useCallback((fn) => {
     setDocs(prev => {
-      const next = typeof fn === "function" ? fn(prev) : fn;
-      pushHistory(nodes, edges, problems, prev);
+      const pArr = Array.isArray(prev) ? prev : [];
+      const next = typeof fn === "function" ? fn(pArr) : fn;
+      pushHistory(nodes, edges, problems, pArr);
       scheduleSave(nodes, edges, problems, next);
       return next;
     });
@@ -1034,26 +1045,75 @@ export default function App() {
 
       {docsModal && (
         <Modal title="Documentación Global" onClose={() => { setDocsModal(false); setEditingDocs(false); }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", minHeight: "250px" }}>
-            {editingDocs ? (
-              <textarea
-                value={docs}
-                onChange={e => updateDocs(e.target.value)}
-                autoFocus
-                style={{ flex: 1, background: "#0f1117", border: "1px solid #334155", borderRadius: "4px", color: "#f8fafc", padding: "10px", fontFamily: "inherit", fontSize: "11px", resize: "vertical", minHeight: "200px", outline: "none" }}
-                placeholder="Escribe o pega aquí la documentación, enlaces o normas de uso..."
-              />
-            ) : (
-              <div style={{ flex: 1, background: "#0f1117", border: "1px solid #1e293b", borderRadius: "4px", color: "#cbd5e1", padding: "10px", fontFamily: "inherit", fontSize: "11px", whiteSpace: "pre-wrap", overflowY: "auto", minHeight: "200px" }}>
-                {docs || <span style={{ color: "#475569", fontStyle: "italic" }}>No hay documentación guardada todavía. Pulsa Editar para añadir información.</span>}
+          <div style={{ display: "flex", gap: "12px", minHeight: "350px", height: "60vh" }}>
+            {/* Lista Lateral de Docs */}
+            <div style={{ width: "160px", background: "#0f1117", border: "1px solid #1e293b", borderRadius: "5px", padding: "8px", display: "flex", flexDirection: "column", gap: "5px", overflowY: "auto" }}>
+              <Btn sm color="#3b82f6" onClick={() => {
+                const newDoc = { id: Math.random().toString(36).substr(2, 9), title: "Nuevo Doc", content: "" };
+                updateDocs(ds => [...ds, newDoc]);
+                setActiveDocId(newDoc.id); setEditingDocs(true);
+              }}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Plus size={11} /> Nuevo Documento</span></Btn>
+
+              <div style={{ marginTop: "8px", borderTop: "1px solid #1e293b", paddingTop: "8px" }}>
+                {Array.isArray(docs) && docs.map(d => (
+                  <button key={d.id}
+                    onClick={() => { setActiveDocId(d.id); setEditingDocs(false); }}
+                    style={{ width: "100%", textAlign: "left", background: activeDocId === d.id ? "#1e293b" : "transparent", border: "none", color: activeDocId === d.id ? "#f8fafc" : "#94a3b8", padding: "6px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit", marginBottom: "3px", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                    {d.title}
+                  </button>
+                ))}
+                {(!docs || docs.length === 0) && <div style={{ color: "#475569", fontSize: "9px", textAlign: "center", fontStyle: "italic", marginTop: "10px" }}>Sin documentos</div>}
               </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
-              {editingDocs ? (
-                <Btn onClick={() => setEditingDocs(false)} color="#10b981"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Check size={11} /> Confirmar edición</span></Btn>
-              ) : (
-                <Btn onClick={() => setEditingDocs(true)} color="#3b82f6"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar texto</span></Btn>
-              )}
+            </div>
+
+            {/* Editor/Visualizador */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {(() => {
+                const doc = Array.isArray(docs) ? docs.find(d => d.id === activeDocId) : null;
+                if (!doc) return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#475569", fontSize: "11px" }}>Selecciona o crea un documento en el panel izquierdo.</div>;
+
+                return (
+                  <>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        {editingDocs ? (
+                          <input type="text" value={doc.title} onChange={e => {
+                            const val = e.target.value;
+                            updateDocs(ds => ds.map(x => x.id === doc.id ? { ...x, title: val } : x));
+                          }} style={{ background: "#0f1117", border: "1px solid #3b82f6", borderRadius: "4px", padding: "6px 10px", color: "#fff", fontSize: "12px", width: "100%", fontFamily: "inherit", boxSizing: "border-box", outline: "none" }} placeholder="Título del documento..." />
+                        ) : (
+                          <div style={{ color: "#f1f5f9", fontSize: "14px", fontWeight: "700" }}>{doc.title}</div>
+                        )}
+                      </div>
+                      {editingDocs ? (
+                        <Btn onClick={() => setEditingDocs(false)} color="#10b981"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Check size={11} /> Confirmar edición</span></Btn>
+                      ) : (
+                        <Btn onClick={() => setEditingDocs(true)} color="#3b82f6"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar</span></Btn>
+                      )}
+                      <Btn color="#ef4444" onClick={() => {
+                        updateDocs(ds => ds.filter(x => x.id !== doc.id));
+                        setActiveDocId(null); setEditingDocs(false);
+                      }}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Trash2 size={11} /> Borrar doc</span></Btn>
+                    </div>
+
+                    {editingDocs ? (
+                      <textarea
+                        value={doc.content}
+                        onChange={e => {
+                          const val = e.target.value;
+                          updateDocs(ds => ds.map(x => x.id === doc.id ? { ...x, content: val } : x));
+                        }}
+                        style={{ flex: 1, background: "#0f1117", border: "1px solid #334155", borderRadius: "4px", color: "#f8fafc", padding: "10px", fontFamily: "inherit", fontSize: "11px", resize: "vertical", outline: "none" }}
+                        placeholder="Escribe o pega aquí la información..."
+                      />
+                    ) : (
+                      <div style={{ flex: 1, background: "#0f1117", border: "1px solid #1e293b", borderRadius: "4px", color: "#cbd5e1", padding: "12px", fontFamily: "inherit", fontSize: "11px", whiteSpace: "pre-wrap", overflowY: "auto" }}>
+                        {doc.content || <span style={{ color: "#475569", fontStyle: "italic" }}>Documento vacío. Pulsa Editar para añadir información.</span>}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </Modal>
