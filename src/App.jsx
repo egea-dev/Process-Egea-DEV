@@ -719,8 +719,7 @@ export default function App() {
                 <div key={type} style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "5px" }}>
                   <svg width="32" height="12"><defs><marker id={`leg-${type}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={s.color} /></marker></defs><line x1="2" y1="6" x2="30" y2="6" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash === "none" ? "" : s.dash} markerEnd={`url(#leg-${type})`} /></svg>
                   <span style={{ color: "#cbd5e1", fontSize: "10px", flex: 1 }}>{EDGE_LABELS[type] || type}</span>
-                  <span style={{ color: "#cbd5e1", fontSize: "10px", flex: 1 }}>{EDGE_LABELS[type] || type}</span>
-                  <div style={{ fontSize: "9px", color: isBidir ? "#60a5fa" : "#64748b", fontWeight: "600" }}>
+                  <div style={{ fontSize: "9px", color: isBidir ? "#60a5fa" : "#64748b", fontWeight: "600", whiteSpace: "nowrap" }}>
                     {isBidir ? "↔ Bidirecc." : "→ Unidirecc."}
                   </div>
                 </div>
