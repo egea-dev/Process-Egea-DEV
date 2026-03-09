@@ -819,10 +819,10 @@ export default function App() {
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "11px" }}>
             {!selectedNode && activeProblems.length === 0 && (
-              <div style={{ color: "#334155", fontSize: "9.5px", lineHeight: 1.8 }}>
+              <div style={{ color: "#94a3b8", fontSize: "9.5px", lineHeight: 1.8 }}>
                 <div style={{ marginBottom: "8px" }}>Clic en nodo → ver conexiones.</div>
                 <div style={{ marginBottom: "8px" }}>2× clic → editar nodo o conexión.</div>
-                <div style={{ color: "#1e293b", fontSize: "8px", letterSpacing: "1px", marginBottom: "6px", marginTop: "16px" }}>ESTADÍSTICAS</div>
+                <div style={{ color: "#64748b", fontSize: "8px", letterSpacing: "1px", marginBottom: "6px", marginTop: "16px", fontWeight: "700" }}>ESTADÍSTICAS</div>
                 {[["Nodos", nodes.length, "#60a5fa"], ["Conexiones", edges.length, "#60a5fa"], ["⚡ Cuellos", problems.filter(p => p.type === "bottleneck").length, "#ef4444"], ["⚠ Avisos", problems.filter(p => p.type === "warning").length, "#f59e0b"], ["↔ Redundancias", problems.filter(p => p.type === "redundancy").length, "#8b5cf6"]].map(([k, v, c]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
                     <span>{k}</span><span style={{ color: c, fontWeight: "700" }}>{v}</span>
@@ -872,7 +872,7 @@ export default function App() {
                       <div style={{ color: ps.color, fontSize: "9px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}><ps.Icon size={11} /> {prob.title}</div>
                     </div>;
                   })}
-                  <div style={{ color: "#334155", fontSize: "8.5px", letterSpacing: "1px", margin: "8px 0 5px" }}>CONEXIONES ({connEdges.length})</div>
+                  <div style={{ color: "#64748b", fontSize: "8.5px", letterSpacing: "1px", margin: "8px 0 5px", fontWeight: "700" }}>CONEXIONES ({connEdges.length})</div>
                   {connEdges.map(edge => {
                     const other = nodes.find(n => n.id === (edge.from === selected ? edge.to : edge.from));
                     const dir = edge.from === selected ? "→" : "←"; const s = ES[edge.type];
@@ -880,10 +880,10 @@ export default function App() {
                       <span style={{ color: s.color, fontSize: "11px", fontWeight: "700" }}>{dir}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ color: "#cbd5e1", fontSize: "9px", fontWeight: "600" }}>{other?.label}</div>
-                        <div style={{ color: "#475569", fontSize: "8px" }}>{edge.label}</div>
+                        <div style={{ color: "#94a3b8", fontSize: "8px" }}>{edge.label}</div>
                         <div style={{ color: s.color, fontSize: "7.5px", opacity: 0.8 }}>[{edge.type}]</div>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); setEditEdge({ ...edge }); }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "10px" }}>✏</button>
+                      <button onClick={e => { e.stopPropagation(); setEditEdge({ ...edge }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={11} /></button>
                     </div>;
                   })}
                 </div>
@@ -895,7 +895,7 @@ export default function App() {
               {Object.entries(GC).map(([g, c]) => (
                 <div key={g} style={{ display: "flex", alignItems: "center", gap: "3px" }}>
                   <div style={{ width: "7px", height: "7px", borderRadius: "2px", background: c.accent }} />
-                  <span style={{ color: "#334155", fontSize: "8px" }}>{g}</span>
+                  <span style={{ color: "#94a3b8", fontSize: "8px" }}>{g}</span>
                 </div>
               ))}
             </div>
