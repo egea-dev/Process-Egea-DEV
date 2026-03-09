@@ -1,0 +1,152 @@
+# 🚀 Guía de despliegue — Mapa Interactivo de Procesos
+# Supabase (base de datos) + Vercel (hosting) + GitHub (código)
+# Tiempo estimado: 15 minutos
+
+═══════════════════════════════════════════════════════════
+ PASO 1 — SUPABASE (base de datos en la nube, gratis)
+═══════════════════════════════════════════════════════════
+
+1. Ve a https://supabase.com y crea una cuenta gratuita.
+
+2. Haz clic en "New project":
+   - Name: mapa-produccion
+   - Database Password: elige una contraseña segura (guárdala)
+   - Region: West EU (Ireland) → la más cercana a España
+
+3. Espera ~2 minutos a que el proyecto se cree.
+
+4. Ve a: SQL Editor (menú izquierdo) → "New query"
+
+5. Copia y pega TODO el contenido de "supabase_setup.sql"
+   y haz clic en "RUN" (▶).
+   Verás: "Success. No rows returned"
+
+6. Obtén tus credenciales:
+   - Ve a: Settings → API
+   - Copia "Project URL"  → es tu VITE_SUPABASE_URL
+   - Copia "anon public"  → es tu VITE_SUPABASE_ANON_KEY
+
+═══════════════════════════════════════════════════════════
+ PASO 2 — GITHUB (subir el código)
+═══════════════════════════════════════════════════════════
+
+Opción A — Sin instalar nada (GitHub web):
+
+1. Ve a https://github.com y crea una cuenta si no tienes.
+
+2. Clic en "+" → "New repository"
+   - Name: mapa-produccion
+   - Private (recomendado para uso interno)
+   - Clic en "Create repository"
+
+3. En la página del repo vacío, haz clic en
+   "uploading an existing file"
+
+4. Arrastra TODOS los archivos de la carpeta del proyecto:
+   ├── index.html
+   ├── vite.config.js
+   ├── package.json
+   ├── .gitignore
+   ├── .env.example
+   ├── supabase_setup.sql
+   └── src/
+       ├── main.jsx
+       ├── App.jsx
+       └── supabase.js
+
+5. Clic en "Commit changes"
+
+⚠️  NO subas el archivo .env.local (contiene tus claves secretas)
+    El .gitignore ya lo excluye automáticamente.
+
+═══════════════════════════════════════════════════════════
+ PASO 3 — VERCEL (hosting gratuito con URL pública)
+═══════════════════════════════════════════════════════════
+
+1. Ve a https://vercel.com y crea una cuenta
+   (recomendado: usa "Continue with GitHub" para conectar todo)
+
+2. Clic en "Add New…" → "Project"
+
+3. Selecciona tu repositorio "mapa-produccion" → "Import"
+
+4. En la pantalla de configuración:
+   - Framework Preset: Vite  (Vercel lo detecta automáticamente)
+   - Build Command: npm run build  (ya está correcto)
+   - Output Directory: dist  (ya está correcto)
+
+5. ⚠️  IMPORTANTE — Variables de entorno:
+   Antes de hacer Deploy, haz clic en "Environment Variables"
+   y añade estas dos variables:
+
+   Name: VITE_SUPABASE_URL
+   Value: https://TU_PROJECT_ID.supabase.co   ← el que copiaste en Paso 1
+
+   Name: VITE_SUPABASE_ANON_KEY
+   Value: eyJhbGciOiJIUzI1NiIs...              ← el que copiaste en Paso 1
+
+6. Clic en "Deploy" → espera ~1 minuto
+
+7. ✅ Vercel te da una URL pública tipo:
+   https://mapa-produccion-xyz.vercel.app
+
+   ¡Comparte esta URL con tu equipo!
+
+═══════════════════════════════════════════════════════════
+ PASO 4 — VERIFICAR QUE FUNCIONA
+═══════════════════════════════════════════════════════════
+
+1. Abre la URL de Vercel en tu navegador.
+   Deberías ver el indicador verde "Supabase conectado".
+
+2. Abre la misma URL en otro navegador (o en incógnito).
+
+3. Edita un nodo en una ventana → en la otra ventana
+   debería actualizarse automáticamente en ~1 segundo.
+
+4. Si ves "⚠ Sin Supabase — modo local", comprueba que
+   las variables de entorno en Vercel están bien escritas.
+
+═══════════════════════════════════════════════════════════
+ ACTUALIZAR EL CÓDIGO EN EL FUTURO
+═══════════════════════════════════════════════════════════
+
+Cada vez que subas cambios a GitHub (drag & drop en la web),
+Vercel redesplega automáticamente en ~30 segundos.
+
+Los datos en Supabase se mantienen entre redespliegues.
+
+═══════════════════════════════════════════════════════════
+ COSTES
+═══════════════════════════════════════════════════════════
+
+Supabase Free:  500 MB base de datos, 2 GB transferencia/mes
+                Más que suficiente para este uso.
+
+Vercel Free:    100 GB transferencia/mes, despliegues ilimitados.
+                Más que suficiente para uso de equipo interno.
+
+Total:          0 € / mes
+
+═══════════════════════════════════════════════════════════
+ PREGUNTAS FRECUENTES
+═══════════════════════════════════════════════════════════
+
+P: ¿Necesito instalar Node.js en mi ordenador?
+R: No. Todo se compila en Vercel en la nube.
+
+P: ¿Qué pasa si dos personas editan a la vez?
+R: El último en guardar gana (last-write-wins).
+   Los cambios se sincronizan en ~1 segundo.
+
+P: ¿Puedo ver quién hizo cada cambio?
+R: Con esta versión no. Si lo necesitas, podemos añadir
+   un log de cambios con usuario y hora.
+
+P: ¿Puedo proteger el acceso con contraseña?
+R: Sí. Podemos añadir autenticación de Supabase (email/password)
+   en una siguiente versión.
+
+P: ¿Cómo hago una copia de seguridad del mapa?
+R: En Supabase → Table Editor → mapa_state → Export CSV.
+   También podemos añadir un botón "Exportar JSON" en la app.
