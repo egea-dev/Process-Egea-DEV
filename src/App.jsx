@@ -284,6 +284,9 @@ export default function App() {
   const [syncMsg, setSyncMsg] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [session, setSession] = useState(undefined); // undefined = cargando
+  const [docs, setDocs] = useState("");
+  const [docsModal, setDocsModal] = useState(false);
+  const [editingDocs, setEditingDocs] = useState(false);
 
   // ── Auth session ──
   useEffect(() => {
@@ -325,8 +328,8 @@ export default function App() {
   const [saveMsg, setSaveMsg] = useState("");
   const historyRef = useRef([]);
 
-  const pushHistory = useCallback((ns, es, ps) => {
-    const snap = { nodes: ns, edges: es, problems: ps };
+  const pushHistory = useCallback((ns, es, ps, dcs) => {
+    const snap = { nodes: ns, edges: es, problems: ps, docs: dcs };
     historyRef.current = [snap, ...historyRef.current].slice(0, 30);
     setHistory(h => [snap, ...h].slice(0, 30));
   }, []);
@@ -344,6 +347,7 @@ export default function App() {
         if (state.nodes) setNodes(state.nodes);
         if (state.edges) setEdges(state.edges);
         if (state.problems) setProblems(state.problems);
+        if (state.docs !== undefined) setDocs(state.docs);
         setSyncMsg("✓ Cargado desde la nube");
       }
       setDbReady(true);
@@ -362,6 +366,7 @@ export default function App() {
           if (s.nodes) setNodes(s.nodes);
           if (s.edges) setEdges(s.edges);
           if (s.problems) setProblems(s.problems);
+          if (s.docs !== undefined) setDocs(s.docs);
           setSyncMsg("↓ Actualizado por otro usuario");
           setTimeout(() => setSyncMsg(""), 3000);
         }
@@ -379,13 +384,13 @@ export default function App() {
   }, []);
 
   // ── Debounced save to DB ──
-  const scheduleSave = useCallback((ns, es, ps) => {
+  const scheduleSave = useCallback((ns, es, ps, dcs) => {
     if (!supabase) return;
     clearTimeout(saveTimer.current);
     ignoreRemote.current = true;
     setSyncMsg("Guardando…");
     saveTimer.current = setTimeout(async () => {
-      await saveToDB({ nodes: ns, edges: es, problems: ps });
+      await saveToDB({ nodes: ns, edges: es, problems: ps, docs: dcs });
       setSyncMsg("✓ Guardado en la nube");
       setTimeout(() => { setSyncMsg(""); ignoreRemote.current = false; }, 2500);
     }, 800);
@@ -395,39 +400,48 @@ export default function App() {
   const updateNodes = useCallback((fn) => {
     setNodes(prev => {
       const next = typeof fn === "function" ? fn(prev) : fn;
-      pushHistory(prev, edges, problems);
-      scheduleSave(next, edges, problems);
+      pushHistory(prev, edges, problems, docs);
+      scheduleSave(next, edges, problems, docs);
       return next;
     });
-  }, [edges, problems, scheduleSave, pushHistory]);
+  }, [edges, problems, docs, scheduleSave, pushHistory]);
 
   const updateEdges = useCallback((fn) => {
     setEdges(prev => {
       const next = typeof fn === "function" ? fn(prev) : fn;
-      pushHistory(nodes, prev, problems);
-      scheduleSave(nodes, next, problems);
+      pushHistory(nodes, prev, problems, docs);
+      scheduleSave(nodes, next, problems, docs);
       return next;
     });
-  }, [nodes, problems, scheduleSave, pushHistory]);
+  }, [nodes, problems, docs, scheduleSave, pushHistory]);
 
   const updateProblems = useCallback((fn) => {
     setProblems(prev => {
       const next = typeof fn === "function" ? fn(prev) : fn;
-      pushHistory(nodes, edges, prev);
-      scheduleSave(nodes, edges, next);
+      pushHistory(nodes, edges, prev, docs);
+      scheduleSave(nodes, edges, next, docs);
       return next;
     });
-  }, [nodes, edges, scheduleSave, pushHistory]);
+  }, [nodes, edges, docs, scheduleSave, pushHistory]);
+
+  const updateDocs = useCallback((fn) => {
+    setDocs(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      pushHistory(nodes, edges, problems, prev);
+      scheduleSave(nodes, edges, problems, next);
+      return next;
+    });
+  }, [nodes, edges, problems, scheduleSave, pushHistory]);
 
   // ── Guardar ahora explícitamente ──
   const saveNow = useCallback(async () => {
     if (!supabase) return;
     clearTimeout(saveTimer.current);
     ignoreRemote.current = true;
-    await saveToDB({ nodes, edges, problems });
+    await saveToDB({ nodes, edges, problems, docs });
     setSaveMsg("Guardado");
     setTimeout(() => { setSaveMsg(""); ignoreRemote.current = false; }, 2000);
-  }, [nodes, edges, problems]);
+  }, [nodes, edges, problems, docs]);
 
   // ── Deshacer (undo) ──
   const undo = useCallback(() => {
@@ -438,8 +452,10 @@ export default function App() {
     setNodes(prev.nodes);
     setEdges(prev.edges);
     setProblems(prev.problems);
-    scheduleSave(prev.nodes, prev.edges, prev.problems);
+    setDocs(prev.docs || "");
+    scheduleSave(prev.nodes, prev.edges, prev.problems, prev.docs || "");
   }, [scheduleSave]);
+
 
 
   // ── Helpers ──
@@ -632,6 +648,11 @@ export default function App() {
             {addEdgeMode ? (addEdgeFrom ? "Clic destino…" : "Clic origen…") : "Conexión"}
           </button>
           {addEdgeMode && <button onClick={() => { setAddEdgeMode(false); setAddEdgeFrom(null); }} style={{ display: "flex", alignItems: "center", background: "#ef4444", border: "none", color: "#fff", padding: "5px 8px", borderRadius: "4px", cursor: "pointer" }}><X size={12} /></button>}
+
+          {/* Documentos */}
+          <button onClick={() => setDocsModal(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            <FileText size={12} /> Documentos
+          </button>
 
           {/* Nodo y Problema */}
           <button onClick={() => setAddNodeM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
@@ -863,7 +884,10 @@ export default function App() {
                     <div style={{ color: "#fff", fontSize: "13px", fontWeight: "700" }}>{selectedNode.label}</div>
                     <div style={{ color: "#cbd5e1", fontSize: "9px", marginTop: "2px" }}>{selectedNode.sub}</div>
                     {selectedNode.persona && <div style={{ marginTop: "5px", background: "rgba(0,0,0,0.3)", borderRadius: "3px", padding: "3px 7px", color: col.accent, fontSize: "9px", display: "flex", alignItems: "center", gap: "5px" }}><Users size={11} /> {selectedNode.persona}</div>}
-                    <div style={{ marginTop: "8px" }}><Btn sm onClick={() => setEditNode({ ...selectedNode })}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar nodo</span></Btn></div>
+                    <div style={{ marginTop: "8px", display: "flex", gap: "6px" }}>
+                      <Btn sm onClick={() => setEditNode({ ...selectedNode })}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar nodo</span></Btn>
+                      <Btn sm color="#3b82f6" onClick={() => { setAddEdgeMode(true); setAddEdgeFrom(selectedNode.id); }}><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Plus size={11} /> Nueva Conexión</span></Btn>
+                    </div>
                   </div>
                   {problems.filter(p => p.nodes.includes(selectedNode.id)).map(prob => {
                     const ps = PS[prob.type];
@@ -882,7 +906,10 @@ export default function App() {
                         <div style={{ color: "#94a3b8", fontSize: "8px" }}>{edge.label}</div>
                         <div style={{ color: s.color, fontSize: "7.5px", opacity: 0.8 }}>[{edge.type}]</div>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); setEditEdge({ ...edge }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={11} /></button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <button onClick={e => { e.stopPropagation(); setEditEdge({ ...edge }); }} title="Editar conexión" style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); deleteEdge(edge.id); }} title="Eliminar conexión" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={11} /></button>
+                      </div>
                     </div>;
                   })}
                 </div>
@@ -1001,6 +1028,33 @@ export default function App() {
           <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
             <Btn color="#374151" onClick={() => setAddProblemM(false)}>Cancelar</Btn>
             <Btn onClick={addProblem}>Añadir</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {docsModal && (
+        <Modal title="Documentación Global" onClose={() => { setDocsModal(false); setEditingDocs(false); }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", minHeight: "250px" }}>
+            {editingDocs ? (
+              <textarea
+                value={docs}
+                onChange={e => updateDocs(e.target.value)}
+                autoFocus
+                style={{ flex: 1, background: "#0f1117", border: "1px solid #334155", borderRadius: "4px", color: "#f8fafc", padding: "10px", fontFamily: "inherit", fontSize: "11px", resize: "vertical", minHeight: "200px", outline: "none" }}
+                placeholder="Escribe o pega aquí la documentación, enlaces o normas de uso..."
+              />
+            ) : (
+              <div style={{ flex: 1, background: "#0f1117", border: "1px solid #1e293b", borderRadius: "4px", color: "#cbd5e1", padding: "10px", fontFamily: "inherit", fontSize: "11px", whiteSpace: "pre-wrap", overflowY: "auto", minHeight: "200px" }}>
+                {docs || <span style={{ color: "#475569", fontStyle: "italic" }}>No hay documentación guardada todavía. Pulsa Editar para añadir información.</span>}
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+              {editingDocs ? (
+                <Btn onClick={() => setEditingDocs(false)} color="#10b981"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Check size={11} /> Confirmar edición</span></Btn>
+              ) : (
+                <Btn onClick={() => setEditingDocs(true)} color="#3b82f6"><span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Pencil size={11} /> Editar texto</span></Btn>
+              )}
+            </div>
           </div>
         </Modal>
       )}
