@@ -652,7 +652,7 @@ export default function App() {
 
 
           {/* Deshacer y Guardar */}
-          <button onClick={undo} disabled={history.length === 0} title={`Deshacer (${history.length} pasos)`} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: history.length > 0 ? "#f59e0b" : (theme === "dark" ? "#374151" : "#cbd5e1"), padding: "5px 10px", borderRadius: "4px", cursor: history.length > 0 ? "pointer" : "not-allowed", fontSize: "10px", fontFamily: "inherit", opacity: history.length > 0 ? 1 : 0.5 }}>
+          <button onClick={undo} disabled={history.length === 0} title={`Deshacer (${history.length} pasos)`} style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: history.length > 0 ? "#f59e0b" : "#374151", padding: "5px 10px", borderRadius: "4px", cursor: history.length > 0 ? "pointer" : "not-allowed", fontSize: "10px", fontFamily: "inherit", opacity: history.length > 0 ? 1 : 0.5 }}>
             <Undo2 size={12} /> Deshacer
           </button>
           {isConfigured && (
@@ -661,7 +661,7 @@ export default function App() {
             </button>
           )}
 
-          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+          <div style={{ width: "1px", height: "18px", background: "#334155" }} />
 
           {/* Logout */}
           <button onClick={() => supabase?.auth.signOut()} title="Cerrar sesión" style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#ef4444", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
