@@ -3,9 +3,8 @@ import { supabase, isConfigured } from "./supabase.js";
 import {
   Zap, AlertTriangle, ArrowLeftRight, ArrowRight,
   Plus, Pencil, Trash2, X, RotateCcw, Users,
-  LogOut, Save, Undo2, Sun, Moon, Check,
-  ChevronRight, ChevronLeft, Link2, FileText,
-  Eye, EyeOff
+  LogOut, Save, Undo2, Check,
+  Link2, FileText
 } from "lucide-react";
 
 
@@ -321,8 +320,7 @@ export default function App() {
   const [draggingNode, setDraggingNode] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // theme + undo + save feedback
-  const [theme, setTheme] = useState("dark");
+  // undo + save feedback
   const [history, setHistory] = useState([]);
   const [saveMsg, setSaveMsg] = useState("");
   const historyRef = useRef([]);
@@ -647,12 +645,10 @@ export default function App() {
           {/* Zoom */}
           <button onClick={() => setZoom(z => Math.min(2.5, z * 1.15))} title="Ampliar" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><Plus size={13} /></button>
           <button onClick={() => setZoom(z => Math.max(0.25, z * 0.87))} title="Reducir" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}>−</button>
-          <button onClick={() => { setZoom(0.82); setPan({ x: 20, y: 20 }); }} title="Resetear vista" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><RotateCcw size={13} /></button>
-          <button onClick={() => { setSelected(null); setActiveProblems([]); }} title="Limpiar selección" style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
-            <X size={12} /> Limpiar
-          </button>
+          <button onClick={() => { setZoom(0.82); setPan({ x: 20, y: 20 }); }} title="Resetear vista" style={{ display: "flex", alignItems: "center", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><RotateCcw size={13} /></button>
 
-          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+          <div style={{ width: "1px", height: "18px", background: "#334155" }} />
+
 
           {/* Deshacer y Guardar */}
           <button onClick={undo} disabled={history.length === 0} title={`Deshacer (${history.length} pasos)`} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: history.length > 0 ? "#f59e0b" : (theme === "dark" ? "#374151" : "#cbd5e1"), padding: "5px 10px", borderRadius: "4px", cursor: history.length > 0 ? "pointer" : "not-allowed", fontSize: "10px", fontFamily: "inherit", opacity: history.length > 0 ? 1 : 0.5 }}>
@@ -666,14 +662,12 @@ export default function App() {
 
           <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
 
-          {/* Tema y Logout */}
-          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Cambiar tema" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#f59e0b" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>
-            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
-          </button>
-          <button onClick={() => supabase?.auth.signOut()} title="Cerrar sesión" style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: "#ef4444", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+          {/* Logout */}
+          <button onClick={() => supabase?.auth.signOut()} title="Cerrar sesión" style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#ef4444", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
             <LogOut size={12} /> Salir
           </button>
         </div>
+
 
         {addEdgeMode && (
           <div style={{ width: "100%", background: "#1e3a5f", borderRadius: "4px", padding: "4px 12px", color: "#60a5fa", fontSize: "9.5px" }}>
@@ -724,17 +718,19 @@ export default function App() {
                 <div key={type} style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "5px" }}>
                   <svg width="32" height="12"><defs><marker id={`leg-${type}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={s.color} /></marker></defs><line x1="2" y1="6" x2="30" y2="6" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash === "none" ? "" : s.dash} markerEnd={`url(#leg-${type})`} /></svg>
                   <span style={{ color: "#cbd5e1", fontSize: "10px", flex: 1 }}>{EDGE_LABELS[type] || type}</span>
-                  {isBidir
-                    ? <ArrowLeftRight size={11} color="#60a5fa" title="Bidireccional" />
-                    : <ArrowRight size={11} color="#475569" title="Unidireccional" />}
+                  <span style={{ color: "#cbd5e1", fontSize: "10px", flex: 1 }}>{EDGE_LABELS[type] || type}</span>
+                  <div style={{ fontSize: "9px", color: isBidir ? "#60a5fa" : "#64748b", fontWeight: "600" }}>
+                    {isBidir ? "↔ Bidirecc." : "→ Unidirecc."}
+                  </div>
                 </div>
               );
+
             })}
           </div>
         </div>
 
         {/* ══ CANVAS ══ */}
-        <div ref={containerRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: theme === "dark" ? "#0f1117" : "#f1f5f9", cursor: addEdgeMode ? "crosshair" : draggingNode ? "grabbing" : panning ? "grabbing" : "grab" }}
+        <div ref={containerRef} style={{ flex: 1, position: "relative", overflow: "hidden", background: "#0f1117", cursor: addEdgeMode ? "crosshair" : draggingNode ? "grabbing" : panning ? "grabbing" : "grab" }}
           onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
           <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
             <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 40},${pan.y % 40}) scale(${zoom})`}><path d="M40 0L0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="0.5" /></pattern></defs>
@@ -773,13 +769,17 @@ export default function App() {
                   : 0;
 
                 const { qx, qy } = calcCurve(fc, tc, offsetMag);
+                // Punto medio exacto de la curva de bezier cuadrática
+                const midX = 0.25 * fc.x + 0.5 * qx + 0.25 * tc.x;
+                const midY = 0.25 * fc.y + 0.5 * qy + 0.25 * tc.y;
                 return (
                   <g key={edge.id} opacity={lit ? 1 : 0.07} style={{ cursor: "pointer" }} onDoubleClick={e => { e.stopPropagation(); setEditEdge({ ...edge }); }}>
                     <path d={`M${fc.x},${fc.y} Q${qx},${qy} ${tc.x},${tc.y}`} fill="none" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash === "none" ? "" : s.dash} markerEnd={`url(#arr-${edge.type})`} />
-                    {lit && edge.label && <text x={qx} y={qy - 4} textAnchor="middle" fontSize="7.5" fill={s.color} fontFamily="monospace" opacity="0.9">{edge.label}</text>}
+                    {lit && edge.label && <text x={midX} y={midY - 4} textAnchor="middle" fontSize="8" fill={s.color} fontWeight="600" fontFamily="monospace" style={{ paintOrder: "stroke", stroke: "#0f1117", strokeWidth: 4, letterSpacing: "0.5px" }}>{edge.label}</text>}
                   </g>
                 );
               })}
+
 
 
               {/* Nodes */}
