@@ -594,19 +594,20 @@ export default function App() {
     <div style={{ fontFamily: "'IBM Plex Mono',monospace", background: "#0f1117", minHeight: "100vh", display: "flex", flexDirection: "column", userSelect: "none" }}>
 
       {/* ══ HEADER ══ */}
-      <div style={{ background: theme === "dark" ? "linear-gradient(90deg,#1e3a5f,#0f1117)" : "linear-gradient(90deg,#dbeafe,#f8fafc)", borderBottom: `1px solid ${theme === "dark" ? "#1e293b" : "#e2e8f0"}`, padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ background: "linear-gradient(90deg,#1e3a5f,#0f1117)", borderBottom: "1px solid #1e293b", padding: "9px 16px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
         <div>
           <div style={{ color: "#60a5fa", fontSize: "9px", letterSpacing: "3px" }}>SISTEMA DE GESTIÓN DE PRODUCCIÓN</div>
-          <div style={{ color: theme === "dark" ? "#f1f5f9" : "#1e293b", fontSize: "14px", fontWeight: "700" }}>MAPA INTERACTIVO EDITABLE</div>
+          <div style={{ color: "#f1f5f9", fontSize: "14px", fontWeight: "700" }}>MAPA INTERACTIVO EDITABLE</div>
         </div>
+
 
         {/* Sync status */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {isConfigured ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: theme === "dark" ? "#0f2027" : "#eff6ff", border: `1px solid ${theme === "dark" ? "#1e3a5f" : "#bfdbfe"}`, borderRadius: "4px", padding: "3px 9px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#0f2027", border: "1px solid #1e3a5f", borderRadius: "4px", padding: "3px 9px" }}>
               <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dbReady ? "#22c55e" : "#f59e0b", boxShadow: `0 0 6px ${dbReady ? "#22c55e" : "#f59e0b"}` }} />
-              <span style={{ color: theme === "dark" ? "#94a3b8" : "#475569", fontSize: "9px" }}>{dbReady ? "Supabase conectado" : "Conectando…"}</span>
-              <span style={{ color: theme === "dark" ? "#475569" : "#94a3b8", fontSize: "9px" }}>·</span>
+              <span style={{ color: "#94a3b8", fontSize: "9px" }}>{dbReady ? "Supabase conectado" : "Conectando…"}</span>
+              <span style={{ color: "#475569", fontSize: "9px" }}>·</span>
               <Users size={11} color="#60a5fa" />
               <span style={{ color: "#60a5fa", fontSize: "9px" }}>{onlineUsers} en línea</span>
             </div>
@@ -626,25 +627,25 @@ export default function App() {
         <div style={{ display: "flex", gap: "5px", alignItems: "center", flexWrap: "wrap" }}>
           {/* Conexión */}
           <button onClick={() => { setAddEdgeMode(m => !m); setAddEdgeFrom(null); }}
-            style={{ display: "flex", alignItems: "center", gap: "4px", background: addEdgeMode ? "#3b82f6" : (theme === "dark" ? "#1e293b" : "#e2e8f0"), border: `1px solid ${addEdgeMode ? "#3b82f6" : (theme === "dark" ? "#334155" : "#94a3b8")}`, color: addEdgeMode ? "#fff" : (theme === "dark" ? "#94a3b8" : "#475569"), padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+            style={{ display: "flex", alignItems: "center", gap: "4px", background: addEdgeMode ? "#3b82f6" : "#1e293b", border: `1px solid ${addEdgeMode ? "#3b82f6" : "#334155"}`, color: addEdgeMode ? "#fff" : "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
             <Link2 size={12} />
             {addEdgeMode ? (addEdgeFrom ? "Clic destino…" : "Clic origen…") : "Conexión"}
           </button>
           {addEdgeMode && <button onClick={() => { setAddEdgeMode(false); setAddEdgeFrom(null); }} style={{ display: "flex", alignItems: "center", background: "#ef4444", border: "none", color: "#fff", padding: "5px 8px", borderRadius: "4px", cursor: "pointer" }}><X size={12} /></button>}
 
           {/* Nodo y Problema */}
-          <button onClick={() => setAddNodeM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+          <button onClick={() => setAddNodeM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
             <Plus size={12} /> Nodo
           </button>
-          <button onClick={() => setAddProblemM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
+          <button onClick={() => setAddProblemM(true)} style={{ display: "flex", alignItems: "center", gap: "4px", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit" }}>
             <Plus size={12} /> Problema
           </button>
 
-          <div style={{ width: "1px", height: "18px", background: theme === "dark" ? "#334155" : "#94a3b8" }} />
+          <div style={{ width: "1px", height: "18px", background: "#334155" }} />
 
           {/* Zoom */}
-          <button onClick={() => setZoom(z => Math.min(2.5, z * 1.15))} title="Ampliar" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><Plus size={13} /></button>
-          <button onClick={() => setZoom(z => Math.max(0.25, z * 0.87))} title="Reducir" style={{ display: "flex", alignItems: "center", background: theme === "dark" ? "#1e293b" : "#e2e8f0", border: `1px solid ${theme === "dark" ? "#334155" : "#94a3b8"}`, color: theme === "dark" ? "#94a3b8" : "#475569", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}>−</button>
+          <button onClick={() => setZoom(z => Math.min(2.5, z * 1.15))} title="Ampliar" style={{ display: "flex", alignItems: "center", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><Plus size={13} /></button>
+          <button onClick={() => setZoom(z => Math.max(0.25, z * 0.87))} title="Reducir" style={{ display: "flex", alignItems: "center", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}>−</button>
           <button onClick={() => { setZoom(0.82); setPan({ x: 20, y: 20 }); }} title="Resetear vista" style={{ display: "flex", alignItems: "center", background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}><RotateCcw size={13} /></button>
 
           <div style={{ width: "1px", height: "18px", background: "#334155" }} />
