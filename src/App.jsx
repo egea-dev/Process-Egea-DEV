@@ -166,10 +166,10 @@ async function saveToDB(state) {
 
 // ─── UI HELPERS ──────────────────────────────────────────────────────────────
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, maxWidth = "520px", children }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "10px", padding: "24px", minWidth: "360px", maxWidth: "520px", width: "90%", maxHeight: "82vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "10px", padding: "24px", minWidth: "360px", maxWidth: maxWidth, width: "90%", maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
           <span style={{ color: "#f1f5f9", fontSize: "13px", fontWeight: "700", letterSpacing: "1px" }}>{title}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "20px", lineHeight: 1 }}>✕</button>
@@ -1044,7 +1044,7 @@ export default function App() {
       )}
 
       {docsModal && (
-        <Modal title="Documentación Global" onClose={() => { setDocsModal(false); setEditingDocs(false); }}>
+        <Modal title="Documentación Global" maxWidth="900px" onClose={() => { setDocsModal(false); setEditingDocs(false); }}>
           <div style={{ display: "flex", gap: "12px", minHeight: "350px", height: "60vh" }}>
             {/* Lista Lateral de Docs */}
             <div style={{ width: "160px", background: "#0f1117", border: "1px solid #1e293b", borderRadius: "5px", padding: "8px", display: "flex", flexDirection: "column", gap: "5px", overflowY: "auto" }}>
