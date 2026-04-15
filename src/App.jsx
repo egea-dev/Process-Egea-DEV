@@ -154,7 +154,7 @@ const ROW_ID = "main";
 
 async function loadFromDB() {
   if (!supabase) return null;
-  const { data, error } = await supabase.from(TABLE).select("*").eq("id", ROW_ID).single();
+  const { data, error } = await supabase.from(TABLE).select("*").eq("id", ROW_ID).maybeSingle();
   if (error || !data) return null;
   return data.state;
 }

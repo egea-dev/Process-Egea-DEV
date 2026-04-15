@@ -80,7 +80,7 @@ Opción A — Sin instalar nada (GitHub web):
    y añade estas dos variables:
 
    Name: VITE_SUPABASE_URL
-   Value: https://TU_PROJECT_ID.supabase.co   ← el que copiaste en Paso 1
+   Value: https://aedrjdisokxrtrmnizwg.supabase.co
 
    Name: VITE_SUPABASE_ANON_KEY
    Value: eyJhbGciOiJIUzI1NiIs...              ← el que copiaste en Paso 1
